@@ -1,0 +1,10 @@
+.vscode/*
+*.exe
+*.zip
+vendor/
+node_modules/
+bin/
+*.log
+*.toml
+*.json
+*.log
