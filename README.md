@@ -10,13 +10,17 @@
 ## 使用说明
 程序使用go语言进行编译，可以下载编译后的文件，也可以自行编译
 ```
-go mod init maicai
+$ go mod init maicai
+ 
+$ go build .
 
-go build .
-
+# 运行编译后的文件 配置文件见下方
+$ ./maicai.exe -f config.toml
 ```
 
 ## 配置文件
+
+配置文件使用toml格式，里面的信息需要抓包填写。
 
 ```toml
 # 开启后台定时任务
