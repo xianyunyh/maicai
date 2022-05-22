@@ -30,7 +30,7 @@ var (
 	uniqId = uuid.NewString()
 )
 
-func commanGetParams(conf *Config) url.Values {
+func commanGetParams(conf *MeituanConfig) url.Values {
 	values := url.Values{}
 	values.Set("utm_medium", "wxapp")
 	values.Set("platform", "android")
@@ -48,7 +48,7 @@ func commanGetParams(conf *Config) url.Values {
 	return values
 }
 
-func AddressList(uiqId string, conf *Config) ([]AddressItem, error) {
+func AddressList(uiqId string, conf *MeituanConfig) ([]AddressItem, error) {
 	client := &http.Client{}
 	params := url.Values{}
 	params.Set("utm_medium", "wxapp")
@@ -87,12 +87,12 @@ func AddressList(uiqId string, conf *Config) ([]AddressItem, error) {
 }
 
 type optitons struct {
-	conf  *Config
+	conf  *MeituanConfig
 	uiqId string
 }
 type Option = func(o *optitons)
 
-func WithConf(c *Config) Option {
+func WithConf(c *MeituanConfig) Option {
 	return func(o *optitons) {
 		o.conf = c
 	}
@@ -119,7 +119,7 @@ func MeituanReq(uri string, method string, body interface{}, opts ...Option) ([]
 		return nil, err
 	}
 	args := &optitons{
-		conf: &Config{},
+		conf: &MeituanConfig{},
 	}
 	for _, fn := range opts {
 		fn(args)
@@ -169,7 +169,7 @@ func MeituanReq(uri string, method string, body interface{}, opts ...Option) ([]
 }
 
 //预览购物车
-func MTPreview(uiqId string, request *PreviewRequest, conf *Config) (*PreviewData, error) {
+func MTPreview(uiqId string, request *PreviewRequest, conf *MeituanConfig) (*PreviewData, error) {
 
 	data, err := MeituanReq(previewUrl, "POST", request, WithConf(conf), WithUiqId(uiqId))
 	if err != nil {
@@ -185,7 +185,7 @@ func MTPreview(uiqId string, request *PreviewRequest, conf *Config) (*PreviewDat
 
 //刷新购物车
 
-func MTRefreshCart(uiqId string, request *CartRefreshRequest, conf *Config) (*CartRefreshData, error) {
+func MTRefreshCart(uiqId string, request *CartRefreshRequest, conf *MeituanConfig) (*CartRefreshData, error) {
 	data, err := MeituanReq(refreshCartUrl, "POST", request, WithConf(conf), WithUiqId(uiqId))
 	if err != nil {
 		return nil, err
@@ -199,7 +199,7 @@ func MTRefreshCart(uiqId string, request *CartRefreshRequest, conf *Config) (*Ca
 }
 
 //获取配送
-func MTArrivalTimeWithDate(uiqId string, conf *Config) (*ArrivalTimeWithDateData, error) {
+func MTArrivalTimeWithDate(uiqId string, conf *MeituanConfig) (*ArrivalTimeWithDateData, error) {
 	request := NewArrivalTimeWithDateRequest(conf)
 	reqUrl := fmt.Sprintf(arrivalTimeTpl, conf.Poi)
 	data, err := MeituanReq(reqUrl, "POST", request, WithConf(conf), WithUiqId(uniqId))
@@ -215,7 +215,7 @@ func MTArrivalTimeWithDate(uiqId string, conf *Config) (*ArrivalTimeWithDateData
 }
 
 //提交订单
-func MTSubmit(uiqId string, conf *Config, request *SubmitRequest) (*SubmitResponse, error) {
+func MTSubmit(uiqId string, conf *MeituanConfig, request *SubmitRequest) (*SubmitResponse, error) {
 	data, err := MeituanReq(submitUrl, "POST", request, WithUiqId(uiqId), WithConf(conf))
 	if err != nil {
 		return nil, err
@@ -230,8 +230,9 @@ func MTSubmit(uiqId string, conf *Config, request *SubmitRequest) (*SubmitRespon
 }
 
 type MeiTuanJob struct {
-	conf   *Config
-	notify Notifyer
+	conf    *MeituanConfig
+	notify  Notifyer
+	SleepMs time.Duration
 }
 
 func (m *MeiTuanJob) GetPreviewOrder(ctx context.Context, res chan<- *PreviewData) {
@@ -252,7 +253,7 @@ func (m *MeiTuanJob) GetPreviewOrder(ctx context.Context, res chan<- *PreviewDat
 			log.Errorf("预付订单生成失败:%s, 正在重试", e.Error())
 		}
 
-		sleepMs := time.Duration(m.conf.SleepMs)
+		sleepMs := time.Duration(m.SleepMs)
 		log.Infof("停顿%dms", sleepMs)
 		time.Sleep(sleepMs * time.Millisecond)
 		m.refreshCart()
@@ -275,7 +276,7 @@ func (m *MeiTuanJob) GetArrivalTimeData(ctx context.Context, res chan<- *Arrival
 			}
 			log.Errorf("获取配送时间遇到错误：%s", e.Error())
 		}
-		sleepMs := time.Duration(m.conf.SleepMs)
+		sleepMs := time.Duration(m.SleepMs)
 		log.Infof("停顿%dms", sleepMs)
 		time.Sleep(sleepMs * time.Millisecond)
 	}
@@ -332,7 +333,6 @@ func (m *MeiTuanJob) createOrder(timeItems ArrivalTimePackageItem, total float64
 		}
 	}
 	return err
-
 }
 
 func (m *MeiTuanJob) refreshCart() error {
@@ -375,10 +375,6 @@ func (m *MeiTuanJob) Run() {
 
 	if err != nil {
 		log.Errorf("创建订单结束:%s", err.Error())
-	}
-	t, err := getNextTime(m.conf.CronRule, cronOpt)
-	if err == nil {
-		log.Infof("下一次运行时间:%s", t.Format(timeFormat))
 	}
 	log.Infof("运行结束：%s", time.Now().Format(timeFormat))
 	m.notify.Send()

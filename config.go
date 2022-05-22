@@ -8,20 +8,31 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-type Config struct {
-	LogLevel    string  `toml:"log_level"`
+type MeituanConfig struct {
 	AddressID   int     `toml:"address_id"`
-	UtmTerm     string  `toml:"utm_term"`
 	Poi         int     `toml:"poi"`
-	HomepageLng float64 `toml:"homepage_lng"`
-	HomepageLat float64 `toml:"homepage_lat"`
 	CityID      int     `toml:"city_id"`
 	Token       string  `toml:"token"`
-	CronEnable  bool    `toml:"cron_enable"`
-	CronRule    string  `toml:"cron_rule"`
-	Media       string  `toml:"media"`
-	SleepMs     int     `toml:"sleep_ms"`
 	Uid         int64   `toml:"uid"`
+	UtmTerm     string  `toml:"utm_term"`
+	HomepageLng float64 `toml:"homepage_lng"`
+	HomepageLat float64 `toml:"homepage_lat"`
+}
+type DingDongConf struct {
+	AddressID string `toml:"address_id"`
+	Poi       string `toml:"poi"`
+	CityID    string `toml:"city_id"`
+	Token     string `toml:"token"`
+	Uid       string `toml:"uid"`
+}
+type Config struct {
+	LogLevel   string         `toml:"log_level"`
+	CronEnable bool           `toml:"cron_enable"`
+	CronRule   string         `toml:"cron_rule"`
+	Media      string         `toml:"media"`
+	SleepMs    int            `toml:"sleep_ms"`
+	Meituan    *MeituanConfig `toml:"meituan"`
+	DingDong   *DingDongConf  `toml:"dingdong"`
 }
 
 func ParseConf(reader io.Reader) (*Config, error) {

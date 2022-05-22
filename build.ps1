@@ -1,10 +1,11 @@
 # 定义数组
 $oss=@(
-    "windows"
+    "windows",
+    "linux",
+    "darwin"
 )
 $archs=@(
-    "amd64",
-    "arm64"
+    "amd64"
 )
 $date=Get-Date
 $buildDate=$date
@@ -17,6 +18,6 @@ foreach($os in $oss){
         SET GOOS=$os
         $env:GOARCH=$arch
         $env:GOOS=$os
-        (go build -ldflags "-X 'main.BuildDate=$buildDate' "  -o ./bin/meituan_$os-$arch .)
+        (go build -ldflags "-X 'main.BuildDate=$buildDate' "  -o ./bin/maicai_$os-$arch .)
     }
 }

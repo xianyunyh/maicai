@@ -42,11 +42,13 @@ func main() {
 	// 初始化日志
 	InitLogger(withOutput(f), withLogLevel(conf.LogLevel))
 	c := cron.New(cron.WithSeconds())
-	job := &MeiTuanJob{conf: conf, notify: TmuxNotify{media: conf.Media}}
+	job := &DingdongJob{conf: conf.DingDong}
+	// job := &MeiTuanJob{conf: conf.Meituan, notify: TmuxNotify{media: conf.Media}}
 	if !conf.CronEnable {
 		job.Run()
 		return
 	}
+
 	rule := defaultCronRule
 	if conf.CronRule != "" {
 		rule = conf.CronRule

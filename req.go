@@ -56,7 +56,7 @@ type SubmitRequest struct {
 	OpenID             string              `json:"openId,omitempty"`
 }
 
-func NewArrivalTimeWithDateRequest(conf *Config) *ArrivalTimeWithDateRequest {
+func NewArrivalTimeWithDateRequest(conf *MeituanConfig) *ArrivalTimeWithDateRequest {
 	return &ArrivalTimeWithDateRequest{
 		AddressID:    conf.AddressID,
 		PoiID:        conf.Poi,
@@ -70,7 +70,7 @@ func NewArrivalTimeWithDateRequest(conf *Config) *ArrivalTimeWithDateRequest {
 	}
 }
 
-func NewPreviewRequest(conf *Config) *PreviewRequest {
+func NewPreviewRequest(conf *MeituanConfig) *PreviewRequest {
 	return &PreviewRequest{
 		FromPoiID:         0,
 		AllowZeroPay:      true,

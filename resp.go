@@ -402,3 +402,203 @@ type ReponseError struct {
 func (r ReponseError) Error() string {
 	return fmt.Sprintf("code=[%d] msg=[%s]", r.code, r.message)
 }
+
+// 叮咚
+
+type DingdongResponse struct {
+	Success bool            `json:"success"`
+	Code    int             `json:"code"`
+	Msg     string          `json:"msg"`
+	Data    json.RawMessage `json:"data"`
+}
+
+type CartData struct {
+	NewOrderProductList []NewOrderProductItem `json:"new_order_product_list"`
+	ParentOrderInfo     struct {
+		ParentOrderSign string `json:"parent_order_sign"`
+	} `json:"parent_order_info"`
+}
+
+type NewOrderProductItem struct {
+	CanUsedBalanceMoney    string        `json:"can_used_balance_money"`
+	CanUsedPointMoney      string        `json:"can_used_point_money"`
+	CanUsedPointNum        int64         `json:"can_used_point_num"`
+	CartCount              int64         `json:"cart_count"`
+	FreeOrderCouponID      []interface{} `json:"freeOrderCouponId"`
+	FrontPackageBgColor    string        `json:"front_package_bg_color"`
+	FrontPackageStockColor string        `json:"front_package_stock_color"`
+	FrontPackageText       string        `json:"front_package_text"`
+	FrontPackageType       int64         `json:"front_package_type"`
+	GoodsRealMoney         string        `json:"goods_real_money"`
+	InstantRebateMoney     string        `json:"instant_rebate_money"`
+	IsPresale              int64         `json:"is_presale"`
+	IsShareStation         int64         `json:"is_share_station"`
+	IsSupplyOrder          bool          `json:"is_supply_order"`
+	OnlyTodayProducts      []interface{} `json:"only_today_products"`
+	OnlyTomorrowProducts   []interface{} `json:"only_tomorrow_products"`
+	PackageID              int64         `json:"package_id"`
+	PackageType            int64         `json:"package_type"`
+	Products               []struct {
+		AccessoryInfoList        []interface{} `json:"accessoryInfoList"`
+		ActivityDiscountInfoList []struct {
+			ActivityID              string      `json:"activityId"`
+			ActivityProductLimitNum interface{} `json:"activityProductLimitNum"`
+			ActivityType            interface{} `json:"activityType"`
+			CostType                interface{} `json:"costType"`
+			Num                     int64       `json:"num"`
+			Price                   string      `json:"price"`
+			PriceType               int64       `json:"priceType"`
+			ThresholdMoney          interface{} `json:"thresholdMoney"`
+		} `json:"activityDiscountInfoList"`
+		ActivityID                string `json:"activity_id"`
+		BuyLimit                  int64  `json:"buy_limit"`
+		CartID                    string `json:"cart_id"`
+		CategoryPath              string `json:"category_path"`
+		ConditionsNum             string `json:"conditions_num"`
+		Count                     int64  `json:"count"`
+		Description               string `json:"description"`
+		ID                        string `json:"id"`
+		InstantRebateMoney        string `json:"instant_rebate_money"`
+		IsBooking                 int64  `json:"is_booking"`
+		IsBulk                    int64  `json:"is_bulk"`
+		IsGift                    int64  `json:"is_gift"`
+		IsInvoice                 int64  `json:"is_invoice"`
+		IsPresale                 int64  `json:"is_presale"`
+		IsSharedStationProduct    int64  `json:"is_shared_station_product"`
+		ManageCategoryPath        string `json:"manage_category_path"`
+		NetWeight                 string `json:"net_weight"`
+		NetWeightUnit             string `json:"net_weight_unit"`
+		NoSupplementaryPrice      string `json:"no_supplementary_price"`
+		NoSupplementaryTotalPrice string `json:"no_supplementary_total_price"`
+		OrderSort                 int64  `json:"order_sort"`
+		OriginPrice               string `json:"origin_price"`
+		ParentBatchType           int64  `json:"parent_batch_type"`
+		ParentID                  string `json:"parent_id"`
+		Price                     string `json:"price"`
+		PriceType                 int64  `json:"price_type"`
+		ProductName               string `json:"product_name"`
+		ProductType               int64  `json:"product_type"`
+		PromotionNum              int64  `json:"promotion_num"`
+		SaleBatches               struct {
+			BatchType int64 `json:"batch_type"`
+		} `json:"sale_batches"`
+		SignType          int64         `json:"signType"`
+		SizePrice         string        `json:"size_price"`
+		Sizes             []interface{} `json:"sizes"`
+		SkuActivityID     string        `json:"sku_activity_id"`
+		SmallImage        string        `json:"small_image"`
+		StorageValueID    int64         `json:"storage_value_id"`
+		SubList           []interface{} `json:"sub_list"`
+		SupplementaryList []interface{} `json:"supplementary_list"`
+		TemperatureLayer  string        `json:"temperature_layer"`
+		TotalOriginPrice  string        `json:"total_origin_price"`
+		TotalPrice        string        `json:"total_price"`
+		TotalMoney        string        `json:"total_money"`
+		TotalOriginMoney  string        `json:"total_origin_money"`
+		Type              int64         `json:"type"`
+		ViewTotalWeight   string        `json:"view_total_weight"`
+	} `json:"products"`
+	StationID            string `json:"stationId"`
+	TotalCount           int64  `json:"total_count"`
+	TotalMoney           string `json:"total_money"`
+	TotalOriginMoney     string `json:"total_origin_money"`
+	TotalRebateMoney     string `json:"total_rebate_money"`
+	UsedBalanceMoney     string `json:"used_balance_money"`
+	UsedPointMoney       string `json:"used_point_money"`
+	UsedPointNum         int64  `json:"used_point_num"`
+	ReservedTimeStart    int64  `json:"reserved_time_start"`
+	ReservedTimeEnd      int64  `json:"reserved_time_end"`
+	SoonArrival          string `json:"soon_arrival"`
+	FirstSelectedBigTime int    `json:"first_selected_big_time"`
+}
+
+type OrderData struct {
+	AlipayTicket             interface{}   `json:"alipay_ticket"`
+	AllCouponCount           int64         `json:"all_coupon_count"`
+	AllGoodsSavedMoney       string        `json:"all_goods_saved_money"`
+	AllGoodsSavedMoneyNote   string        `json:"all_goods_saved_money_note"`
+	CanUseFreightCoupon      bool          `json:"can_use_freight_coupon"`
+	CanUseFreightCouponCount int64         `json:"can_use_freight_coupon_count"`
+	CanUsedBalanceMoney      string        `json:"can_used_balance_money"`
+	CanUsedPointMoney        string        `json:"can_used_point_money"`
+	CanUsedPointNum          int64         `json:"can_used_point_num"`
+	Coupons                  interface{}   `json:"coupons"`
+	CouponsMoney             string        `json:"coupons_money"`
+	DefaultCoupon            struct{}      `json:"default_coupon"`
+	DefaultCoupons           []interface{} `json:"default_coupons"`
+	DefaultFreightCoupon     struct{}      `json:"default_freight_coupon"`
+	DefaultFreightCoupons    []interface{} `json:"default_freight_coupons"`
+	DisableCouponImg         string        `json:"disable_coupon_img"`
+	DisableCouponNote        string        `json:"disable_coupon_note"`
+	DiscountMoney            string        `json:"discount_money"`
+	DisplayTotalMoney        string        `json:"display_total_money"`
+	FreeFreightNotice        string        `json:"free_freight_notice"`
+	FreightDiscountMoney     string        `json:"freight_discount_money"`
+	FreightMoney             string        `json:"freight_money"`
+	FreightRealMoney         string        `json:"freight_real_money"`
+	Freights                 []struct {
+		Freight struct {
+			DiscountFreightMoney string `json:"discount_freight_money"`
+			FreightMoney         string `json:"freight_money"`
+			FreightRealMoney     string `json:"freight_real_money"`
+			Remark               string `json:"remark"`
+			Type                 int64  `json:"type"`
+		} `json:"freight"`
+		PackageID            int64 `json:"package_id"`
+		RealMatchSupplyOrder bool  `json:"real_match_supply_order"`
+	} `json:"freights"`
+	FullToOff              string      `json:"full_to_off"`
+	GoodsOriginMoney       string      `json:"goods_origin_money"`
+	GoodsRealMoney         string      `json:"goods_real_money"`
+	InstantRebateMoney     string      `json:"instant_rebate_money"`
+	InvoiceMoney           string      `json:"invoice_money"`
+	PointHint              string      `json:"point_hint"`
+	ProductShortOrderText  interface{} `json:"product_short_order_text"`
+	ShowPoint              int64       `json:"show_point"`
+	TotalMoney             string      `json:"total_money"`
+	UsableCouponCount      int64       `json:"usable_coupon_count"`
+	UseFreightCouponNotice interface{} `json:"use_freight_coupon_notice"`
+	UsedBalanceMoney       string      `json:"used_balance_money"`
+	UsedPointMoney         string      `json:"used_point_money"`
+	UsedPointNum           int64       `json:"used_point_num"`
+	UserPointNum           int64       `json:"user_point_num"`
+	Vip                    struct{}    `json:"vip"`
+	VipFreeFreight         interface{} `json:"vip_free_freight"`
+	VipGoodsSaveMoney      string      `json:"vip_goods_save_money"`
+	VipGoodsSaveMoneyNote  interface{} `json:"vip_goods_save_money_note"`
+	VipMoney               string      `json:"vip_money"`
+}
+type checkOrderData struct {
+	Order OrderData `json:"order"`
+}
+
+type getMultiReserveTimeItem struct {
+	AllFull bool `json:"all_full"`
+	Time    []struct {
+		DateStr          string            `json:"date_str"`
+		DateStrTimestamp int64             `json:"date_str_timestamp"`
+		Day              string            `json:"day"`
+		IsInvalid        bool              `json:"is_invalid"`
+		TimeFullTextTip  string            `json:"time_full_text_tip"`
+		Times            []ReserveTimeItem `json:"times"`
+	} `json:"time"`
+}
+
+type ReserveTimeItem struct {
+	ArrivalTime             bool        `json:"arrival_time"`
+	ArrivalTimeMsg          string      `json:"arrival_time_msg"`
+	DisableMsg              string      `json:"disableMsg"`
+	DisableType             int64       `json:"disableType"`
+	EndTime                 string      `json:"end_time"`
+	EndTimestamp            int64       `json:"end_timestamp"`
+	FullFlag                bool        `json:"fullFlag"`
+	SelectMsg               string      `json:"select_msg"`
+	StartTime               string      `json:"start_time"`
+	StartTimestamp          int64       `json:"start_timestamp"`
+	SupplyOrderCountDownTip interface{} `json:"supply_order_count_down_tip"`
+	SupplyOrderEndTime      interface{} `json:"supply_order_end_time"`
+	SupplyOrderTip          interface{} `json:"supply_order_tip"`
+	TextMsg                 string      `json:"textMsg"`
+	TimeBizType             interface{} `json:"time_biz_type"`
+	Type                    int64       `json:"type"`
+}
