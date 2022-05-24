@@ -6,11 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
-	"syscall"
+	"sync"
 	"time"
-
-	"github.com/robfig/cron/v3"
 )
 
 var (
@@ -24,7 +21,7 @@ func main() {
 	flag.StringVar(&confFile, "f", "config.toml", "config文件")
 	flag.Parse()
 	conf := &Config{}
-	f, err := os.OpenFile("meituan.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
+	f, err := os.OpenFile("maicai.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 	if err == nil {
 		defer f.Close()
 	}
@@ -41,36 +38,27 @@ func main() {
 	}
 	// 初始化日志
 	InitLogger(withOutput(f), withLogLevel(conf.LogLevel))
-	c := cron.New(cron.WithSeconds())
-	job := &DingdongJob{conf: conf.DingDong}
-	// job := &MeiTuanJob{conf: conf.Meituan, notify: TmuxNotify{media: conf.Media}}
-	if !conf.CronEnable {
-		job.Run()
+	sleepMs := time.Duration(conf.SleepMs)
+	jobs := make([]Job, 0, 2)
+	if conf.DingDong.Enable {
+		ddJob := NewDDJob(conf.DingDong, time.Duration(conf.SleepMs), conf.Debug)
+		jobs = append(jobs, ddJob)
+	}
+	if conf.Meituan.Enable {
+		meituanJob := &MeiTuanJob{conf: conf.Meituan, SleepMs: sleepMs}
+		jobs = append(jobs, meituanJob)
+	}
+	if len(jobs) == 0 {
+		log.Info("没有配置可执行的job")
 		return
 	}
-
-	rule := defaultCronRule
-	if conf.CronRule != "" {
-		rule = conf.CronRule
+	wg := sync.WaitGroup{}
+	for _, job := range jobs {
+		wg.Add(1)
+		go func(j Job) {
+			defer wg.Done()
+			j.Run()
+		}(job)
 	}
-	next, err := getNextTime(rule, cronOpt)
-	if err != nil {
-		log.Errorf("定时任务[%s]规则不合法:%s", rule, err.Error())
-		return
-	}
-	log.Info("程序将在后台定时运行")
-	log.Infof("下一次运行时间:%s", next.Format("2006-01-02 15:04:05"))
-	c.AddJob(rule, job)
-	c.Start()
-	signalChans := make(chan os.Signal, 3)
-
-	signal.Notify(signalChans, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGQUIT)
-
-	select {
-	case <-signalChans:
-		log.Info("stop")
-		time.Sleep(1 * time.Second)
-		c.Stop()
-	}
-
+	wg.Wait()
 }

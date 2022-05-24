@@ -146,7 +146,7 @@ func MeituanReq(uri string, method string, body interface{}, opts ...Option) ([]
 		return nil, fmt.Errorf("http_code=%d", resp.StatusCode)
 	}
 	end := time.Now()
-	log.Debugf("api=[%s] 耗时:%d ms", reqUrl, end.Sub(start).Milliseconds())
+	log.Debugf("【美团】api=[%s] 耗时:%d ms", reqUrl, end.Sub(start).Milliseconds())
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -162,7 +162,7 @@ func MeituanReq(uri string, method string, body interface{}, opts ...Option) ([]
 		return nil, err
 	}
 	if temp.Code != 0 {
-		log.Errorf("error_code=[%d],msg=[%s]", temp.Code, temp.Error.Msg)
+		log.Errorf("【美团】error_code=[%d],msg=[%s]", temp.Code, temp.Error.Msg)
 		return nil, ReponseError{code: temp.Code, message: temp.Error.Msg}
 	}
 	return temp.Data, nil
@@ -229,32 +229,36 @@ func MTSubmit(uiqId string, conf *MeituanConfig, request *SubmitRequest) (*Submi
 
 }
 
+type Job interface {
+	Run()
+}
 type MeiTuanJob struct {
 	conf    *MeituanConfig
 	notify  Notifyer
 	SleepMs time.Duration
+	finish  chan bool
 }
 
 func (m *MeiTuanJob) GetPreviewOrder(ctx context.Context, res chan<- *PreviewData) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Errorf("超过脚本最长运行时间")
+			log.Errorf("【美团】超过脚本最长运行时间")
 			res <- nil
 			return
 		default:
 			prevReq := NewPreviewRequest(m.conf)
 			temp, e := MTPreview(uniqId, prevReq, m.conf)
 			if e == nil {
-				log.Infof("生成预付订单成功")
+				log.Infof("【美团】生成预付订单成功")
 				res <- temp
 				return
 			}
-			log.Errorf("预付订单生成失败:%s, 正在重试", e.Error())
+			log.Errorf("【美团】预付订单生成失败:%s, 正在重试", e.Error())
 		}
 
 		sleepMs := time.Duration(m.SleepMs)
-		log.Infof("停顿%dms", sleepMs)
+		log.Infof("【美团】预付订单停顿%dms", sleepMs)
 		time.Sleep(sleepMs * time.Millisecond)
 		m.refreshCart()
 	}
@@ -264,20 +268,20 @@ func (m *MeiTuanJob) GetArrivalTimeData(ctx context.Context, res chan<- *Arrival
 	for {
 		select {
 		case <-ctx.Done():
-			log.Errorf("超过最长时间:[%v]", ctx.Err())
+			log.Errorf("【美团】超过最长时间:[%v]", ctx.Err())
 			res <- nil
 			return
 		default:
 			temp, e := MTArrivalTimeWithDate(uniqId, m.conf)
 			if e == nil {
-				log.Info("成功获取有效配送时间")
+				log.Info("【美团】成功获取有效配送时间")
 				res <- temp
 				return
 			}
-			log.Errorf("获取配送时间遇到错误：%s", e.Error())
+			log.Errorf("【美团】获取配送时间遇到错误：%s", e.Error())
 		}
 		sleepMs := time.Duration(m.SleepMs)
-		log.Infof("停顿%dms", sleepMs)
+		log.Infof("【美团】停顿%dms", sleepMs)
 		time.Sleep(sleepMs * time.Millisecond)
 	}
 }
@@ -287,7 +291,7 @@ func (m *MeiTuanJob) createOrder(timeItems ArrivalTimePackageItem, total float64
 	var foundIdx int
 	for _, aTitem := range timeItems.ArrivalTimeList {
 		if aTitem.Disable {
-			log.Infof("%s已约满", aTitem.TimeIntervals)
+			log.Infof("【美团】%s已约满", aTitem.TimeIntervals)
 			continue
 		}
 		foundIdx = foundIdx + 1
@@ -320,13 +324,13 @@ func (m *MeiTuanJob) createOrder(timeItems ArrivalTimePackageItem, total float64
 			},
 			ShippingType: 0,
 		}
-		log.Info("正在提交订单......")
+		log.Info("【美团】正在提交订单......")
 		_, err = MTSubmit(uniqId, m.conf, subReq)
 
 		if err != nil {
 			if strings.Contains(err.Error(), "订单未支付成功") {
-				log.Infof("配送时间:%s", aTitem.TimeIntervals)
-				log.Info("订单生成成功，请前往订单页支付")
+				log.Infof("【美团】配送时间:%s", aTitem.TimeIntervals)
+				log.Info("【美团】订单生成成功✔️，请前往订单页支付😃😃😃😃😃😃")
 				return nil
 			}
 			log.Errorf("创建订单遇到错误:%s", err.Error())
@@ -346,7 +350,7 @@ func (m *MeiTuanJob) refreshCart() error {
 	return nil
 }
 func (m *MeiTuanJob) Run() {
-	log.Infof("开始运行：%s", time.Now().Format(timeFormat))
+	log.Infof("【美团】脚本开始运行：%s", time.Now().Format(timeFormat))
 	var err error
 	uniqId = uuid.NewString()
 	previewResult := make(chan *PreviewData, 1)
@@ -355,18 +359,18 @@ func (m *MeiTuanJob) Run() {
 	m.GetPreviewOrder(ctx, previewResult)
 	prevResp := <-previewResult
 	if prevResp == nil {
-		log.Error("生成订单出错")
+		log.Error("【美团】生成订单出错")
 		return
 	}
 	timeResult := make(chan *ArrivalTimeWithDateData, 1)
 	m.GetArrivalTimeData(ctx, timeResult)
 	timeR := <-timeResult
 	if timeR == nil {
-		log.Error("获取配送时间失败:")
+		log.Error("【美团】获取配送时间失败:")
 		return
 	}
 	if len(timeR.PackageInfo) == 0 {
-		log.Errorf("未找到有效配送时间段:[%v]", timeR)
+		log.Errorf("【美团】未找到有效配送时间段:[%v]", timeR)
 		return
 	}
 	timeItems := timeR.PackageInfo[0]
@@ -374,8 +378,7 @@ func (m *MeiTuanJob) Run() {
 	err = m.createOrder(timeItems, prevResp.TotalPay)
 
 	if err != nil {
-		log.Errorf("创建订单结束:%s", err.Error())
+		log.Errorf("【美团】创建订单结束:%s", err.Error())
 	}
-	log.Infof("运行结束：%s", time.Now().Format(timeFormat))
-	m.notify.Send()
+	log.Infof("【美团】运行结束：%s", time.Now().Format(timeFormat))
 }

@@ -11,8 +11,10 @@ import (
 )
 
 type DingdongJob struct {
-	conf    *DingDongConf
+	conf    *DingDongConfig
+	debug   bool
 	sleepMs time.Duration
+	finish  chan bool
 }
 
 //接口常量信息
@@ -31,11 +33,14 @@ var (
 	getMultiReserveTimeUrl = "https://maicai.api.ddxq.mobi/order/getMultiReserveTime"
 )
 
-func NewDDJob(conf *DingDongConf, ms time.Duration) *DingdongJob {
-	return &DingdongJob{conf: conf, sleepMs: ms}
+func NewDDJob(conf *DingDongConfig, ms time.Duration, debug bool) *DingdongJob {
+	if ms <= 0 {
+		ms = 500
+	}
+	return &DingdongJob{conf: conf, sleepMs: ms, debug: debug}
 }
 
-func getCommonHeaders(conf *DingDongConf) map[string]string {
+func getCommonHeaders(conf *DingDongConfig) map[string]string {
 	result := make(map[string]string)
 	result["ddmc-api-version"] = API_VERSION
 	result["ddmc-app-client-id"] = fmt.Sprintf("%d", APP_CLIENT_ID)
@@ -46,7 +51,7 @@ func getCommonHeaders(conf *DingDongConf) map[string]string {
 	return result
 }
 
-func getCommonParams(conf *DingDongConf) map[string]string {
+func getCommonParams(conf *DingDongConfig) map[string]string {
 	result := make(map[string]string)
 	result["uid"] = conf.Uid
 	result["station_id"] = conf.Poi
@@ -59,25 +64,41 @@ func getCommonParams(conf *DingDongConf) map[string]string {
 	return result
 }
 
+func overTime(start time.Time, max time.Duration) bool {
+	now := time.Now()
+	if now.Sub(start) > max {
+		log.Info("已经超过最长时间:%d", max/time.Minute)
+		return true
+	}
+	return false
+}
+
 func (d *DingdongJob) Run() {
+	startTime := time.Now()
+	maxRunTime := time.Minute * 15
+	log.Infof("【叮咚】脚本运行开始时间:%s", startTime.Format("2006-01-02 15:04:05"))
 	var err error
 	//刷新购物车列表
 	cartProducts, sign, err := d.getCartProducts(context.TODO())
 	if err != nil {
-		log.Errorf("获取购物车商品出错:%s", err.Error())
+		log.Errorf("【叮咚】获取购物车商品出错:%s", err.Error())
 		return
 	}
-	log.Debugf("%+v", cartProducts)
+
 	if len(cartProducts) == 0 {
-		log.Infof("购物车为空")
+		log.Infof("【叮咚】购物车为空")
 		return
 	}
+	//校验订单
 	var orderData *OrderData
 	for {
+		if overTime(startTime, maxRunTime) {
+			return
+		}
 		orderData, err = d.checkOrder(&cartProducts)
 		if err != nil {
-			log.Errorf("checkOrder error:%s", err.Error())
-			time.Sleep(1 * time.Second)
+			log.Errorf("【叮咚】checkOrder error:%s", err.Error())
+			time.Sleep(time.Millisecond * d.sleepMs)
 			continue
 		}
 		break
@@ -85,20 +106,27 @@ func (d *DingdongJob) Run() {
 	//获取预约时间
 	var times []ReserveTimeItem
 	for {
+		if overTime(startTime, maxRunTime) {
+			return
+		}
 		times, err = d.getMultiReserveTime(cartProducts)
 		if err != nil {
-			log.Errorf("getMultiReserveTime error:%s", err.Error())
-			time.Sleep(1 * time.Second)
+			log.Errorf("【叮咚】getMultiReserveTime error:%s", err.Error())
+			time.Sleep(time.Millisecond * d.sleepMs)
 			continue
 		}
 		break
 	}
 	if len(times) == 0 {
-		log.Info("有效预约时段为空")
+		log.Info("【叮咚】有效预约时段为空")
 		return
 	}
-	log.Infof("获取到%d个有效预约时间段", len(times))
-
+	log.Infof("【叮咚】获取到%d个有效预约时间段", len(times))
+loop:
+	if overTime(startTime, maxRunTime) {
+		log.Info("【叮咚】脚本已经超过最长时间")
+		return
+	}
 	for _, reserveTime := range times {
 		payment := make(map[string]interface{})
 		payment["reserved_time_start"] = reserveTime.StartTimestamp
@@ -110,27 +138,31 @@ func (d *DingdongJob) Run() {
 		payment["parent_order_sign"] = sign
 		payment["product_type"] = 1
 		payment["address_id"] = d.conf.AddressID
-		payment["pay_type"] = 6 //6
+		payment["pay_type"] = 6 //小程序支付
 		//不使用VIP或折扣码
 		payment["vip_money"] = ""              //
 		payment["vip_buy_user_ticket_id"] = "" //
 		payment["coupons_money"] = ""          //
 		payment["coupons_id"] = ""             //
+		log.Infof("【叮咚】尝试时段:%s", reserveTime.SelectMsg)
 		code, msg, err := d.createOrder(payment, cartProducts)
+		//错误直接返回
 		if err != nil {
 			log.Errorf("createOrder error:%s", err.Error())
 			return
 		}
-		log.Info(msg)
-		//5003 商品信息有变化
-		if code != 6001 {
-			log.Errorf("createOrder error:%d", code)
-			time.Sleep(time.Second * 10)
+		//6001 支付参数错误
+		if code == 6001 {
+			log.Info(msg)
+			log.Infof("【叮咚】下单成功✔️:%s😃😃😃😃😃😃😃", reserveTime.SelectMsg)
+			return
 		}
-		log.Infoln("code:%d", code)
-
+		log.Errorf("【叮咚】创建订单 error:%d msg:%s", code, msg)
+		time.Sleep(2 * time.Second)
 	}
+	log.Infof("【叮咚】开始重试门店预约时间")
 
+	goto loop
 }
 func (d *DingdongJob) getCartProducts(ctx context.Context) ([]NewOrderProductItem, string, error) {
 	var cartData *CartData
@@ -143,31 +175,33 @@ func (d *DingdongJob) getCartProducts(ctx context.Context) ([]NewOrderProductIte
 		default:
 			cartData, err = d.cartIndex()
 			if err != nil {
-				log.Errorf("cartIndex:%s", err.Error())
-				time.Sleep(10 * time.Second)
+				log.Errorf("【叮咚】cartIndex:%s", err.Error())
+				time.Sleep(time.Millisecond * d.sleepMs)
 				continue
 			}
 			return cartData.NewOrderProductList, cartData.ParentOrderInfo.ParentOrderSign, nil
 		}
 	}
 }
-func (d *DingdongJob) newR() *resty.Client {
+func (d *DingdongJob) newR() *resty.Request {
 	return resty.New().
 		SetTimeout(10 * time.Second).
 		SetRetryCount(3).
-		SetDebug(true)
+		SetDebug(d.debug).R()
 }
+
 func (d *DingdongJob) cartIndex() (*CartData, error) {
 	headers := getCommonHeaders(d.conf)
 	params := getCommonParams(d.conf)
 	params["is_load"] = "1"
 	r := d.newR()
 	response := &DingdongResponse{}
-	_, err := r.R().
+	_, err := r.
 		SetQueryParams(params).
 		SetHeaders(headers).
 		SetResult(response).
 		SetHeader("content-type", contentType).
+		SetHeader("User-agent", wechatUA).
 		Get(cartIndexUrl)
 	if err != nil {
 		return nil, err
@@ -210,15 +244,17 @@ func (d *DingdongJob) checkOrder(orderProducts *[]NewOrderProductItem) (*OrderDa
 	params["packages"] = string(packages)
 	r := d.newR()
 	response := &DingdongResponse{}
-	_, err = r.R().
+	_, err = r.
 		SetFormData(params).
 		SetHeaders(headers).
 		SetResult(response).
 		SetHeader("content-type", contentType).
+		// SetHeader("User-agent", wechatUA).
 		Post(checkOrderUrl)
 	if err != nil {
 		return nil, err
 	}
+
 	if !response.Success {
 		return nil, errors.New(response.Msg)
 	}
@@ -236,7 +272,7 @@ func (d *DingdongJob) getMultiReserveTime(list []NewOrderProductItem) ([]Reserve
 	params["products"] = "[[{}]]"
 	response := &DingdongResponse{}
 	r := d.newR()
-	_, err := r.R().
+	_, err := r.
 		SetFormData(params).
 		SetHeaders(headers).
 		SetResult(response).
@@ -254,7 +290,7 @@ func (d *DingdongJob) getMultiReserveTime(list []NewOrderProductItem) ([]Reserve
 		return nil, err
 	}
 	if len(data) == 0 {
-		return nil, errors.New("获取预约出错")
+		return nil, errors.New("【叮咚】获取预约出错")
 	}
 	if len(data[0].Time) == 0 {
 		return nil, errors.New("获取预约出错:time为空")
@@ -263,7 +299,12 @@ func (d *DingdongJob) getMultiReserveTime(list []NewOrderProductItem) ([]Reserve
 	times := data[0].Time[0].Times
 	var result []ReserveTimeItem
 	for _, v := range times {
+		//跳过约满
 		if v.FullFlag {
+			continue
+		}
+		//跳过type !=1
+		if v.Type != 1 {
 			continue
 		}
 		result = append(result, v)
@@ -292,12 +333,9 @@ func (d *DingdongJob) createOrder(payment map[string]interface{}, packages []New
 		return 0, "", err
 	}
 	params["package_order"] = string(temp)
-	r := resty.New().
-		SetTimeout(10 * time.Second).
-		SetRetryCount(3).
-		SetDebug(true)
+	r := d.newR()
 	response := &DingdongResponse{}
-	_, err = r.R().
+	_, err = r.
 		SetFormData(params).
 		SetHeaders(headers).
 		SetResult(response).

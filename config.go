@@ -9,6 +9,7 @@ import (
 )
 
 type MeituanConfig struct {
+	Enable      bool    `toml:"enable"`
 	AddressID   int     `toml:"address_id"`
 	Poi         int     `toml:"poi"`
 	CityID      int     `toml:"city_id"`
@@ -18,21 +19,25 @@ type MeituanConfig struct {
 	HomepageLng float64 `toml:"homepage_lng"`
 	HomepageLat float64 `toml:"homepage_lat"`
 }
-type DingDongConf struct {
+
+type DingDongConfig struct {
+	Enable    bool   `toml:"enable"`
 	AddressID string `toml:"address_id"`
 	Poi       string `toml:"poi"`
 	CityID    string `toml:"city_id"`
 	Token     string `toml:"token"`
 	Uid       string `toml:"uid"`
 }
+
 type Config struct {
-	LogLevel   string         `toml:"log_level"`
-	CronEnable bool           `toml:"cron_enable"`
-	CronRule   string         `toml:"cron_rule"`
-	Media      string         `toml:"media"`
-	SleepMs    int            `toml:"sleep_ms"`
-	Meituan    *MeituanConfig `toml:"meituan"`
-	DingDong   *DingDongConf  `toml:"dingdong"`
+	Debug      bool            `toml:"debug"`
+	LogLevel   string          `toml:"log_level"`
+	CronEnable bool            `toml:"cron_enable"`
+	CronRule   string          `toml:"cron_rule"`
+	Media      string          `toml:"media"`
+	SleepMs    int             `toml:"sleep_ms"`
+	Meituan    *MeituanConfig  `toml:"meituan"`
+	DingDong   *DingDongConfig `toml:"dingdong"`
 }
 
 func ParseConf(reader io.Reader) (*Config, error) {
