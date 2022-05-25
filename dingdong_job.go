@@ -303,10 +303,10 @@ func (d *DingdongJob) getMultiReserveTime(list []NewOrderProductItem) ([]Reserve
 		if v.FullFlag {
 			continue
 		}
-		//跳过type !=1
-		if v.Type != 1 {
-			continue
-		}
+		// //跳过type !=1
+		// if v.Type != 1 {
+		// 	continue
+		// }
 		result = append(result, v)
 	}
 	return result, nil
