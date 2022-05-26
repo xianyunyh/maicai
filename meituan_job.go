@@ -260,7 +260,16 @@ func (m *MeiTuanJob) GetPreviewOrder(ctx context.Context, res chan<- *PreviewDat
 		sleepMs := time.Duration(m.SleepMs)
 		log.Infof("【美团】预付订单停顿%dms", sleepMs)
 		time.Sleep(sleepMs * time.Millisecond)
-		m.refreshCart()
+		count, _, err := m.refreshCart()
+		if err != nil {
+			log.Errorf("【美团】刷新购物车遇到错误:%s", err.Error())
+			continue
+		}
+		if count == 0 {
+			log.Infof("【美团】购物车为空")
+			res <- nil
+			return
+		}
 	}
 }
 
@@ -339,15 +348,15 @@ func (m *MeiTuanJob) createOrder(timeItems ArrivalTimePackageItem, total float64
 	return err
 }
 
-func (m *MeiTuanJob) refreshCart() error {
+func (m *MeiTuanJob) refreshCart() (int, int, error) {
 	req := NewCartRefreshRequest(int64(m.conf.Poi))
 	resp, err := MTRefreshCart(uniqId, req, m.conf)
 	if err != nil {
 		log.Errorf("刷新购物遇到错误:%s", err.Error())
-		return err
+		return 0, 0, err
 	}
 	log.Infof("刷新购物车成功，购物车总计商品:%d个：总价:%d", resp.TotalItemCounts, resp.TotalAmount)
-	return nil
+	return resp.TotalItemCounts, resp.TotalAmount, nil
 }
 func (m *MeiTuanJob) Run() {
 	log.Infof("【美团】脚本开始运行：%s", time.Now().Format(timeFormat))
